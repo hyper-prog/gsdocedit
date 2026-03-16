@@ -1,0 +1,18 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/replace_swap.png</file>
+        <file>icons/preview.png</file>
+        <file>icons/external.png</file>
+        <file>icons/gsdocedit.png</file>
+        <file>icons/console.svg</file>
+        <file>hu.qm</file>
+        <file>icons/arraydoc.png</file>
+        <file>icons/document-close.png</file>
+        <file>icons/document-new.png</file>
+        <file>icons/document-open.png</file>
+        <file>icons/document-save.png</file>
+        <file>icons/document-save-as.png</file>
+        <file>icons/dialog-close.png</file>
+        <file>icons/information.png</file>
+    </qresource>
+</RCC>
