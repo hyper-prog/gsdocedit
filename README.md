@@ -1,8 +1,9 @@
 ![GsDocEdit logo](https://raw.githubusercontent.com/hyper-prog/gsdocedit/master/icons/gsdocedit.png)
 
-# GsDocEdit — gSAFE Document Editor
+GsDocEdit — gSafe Document Editor
+=====================================
 
-GsDocEdit is a graphical editor and PDF generator for the document description language used in the [gSAFE](https://github.com/hyper-prog/gsafe) C++ library (`HPageTileRenderer` / `HTextProcessor`, defined in `gSAFE/po.h`).  
+GsDocEdit is a graphical editor and PDF generator for the document description language used in the [gSafe](https://github.com/hyper-prog/gsafe) C++ library (`HPageTileRenderer` / `HTextProcessor`, defined in `gSAFE/po.h`).  
 
 ---
 
@@ -224,7 +225,7 @@ Use **Functions → Edit Replacement Data** to manage key-value pairs through th
 | Dependency | Role |
 |---|---|
 | [Qt 6](https://www.qt.io/) | GUI, PDF writer, image handling |
-| [gSAFE](http://hyperprog.com/gsafe/) | Document renderer (`HPageTileRenderer`, `HTextProcessor`, `HPdfPreviewDialog`) — included in `gSAFE/` |
+| [gSafe](https://github.com/hyper-prog/gsafe) | Document renderer (`HPageTileRenderer`, `HTextProcessor`, `HPdfPreviewDialog`) — included in `gSAFE/` |
 | [qpdf](https://github.com/qpdf/qpdf) | Optional — merging rendered PDF with an underlay PDF |
 
 ---
