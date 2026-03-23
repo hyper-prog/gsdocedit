@@ -235,3 +235,76 @@ void DocAssembler::clearValueMaps()
 {
     textProcessor->clearValueMaps();
 }
+
+QMap<QString,QString> getFilenameTitlePairsFromFolder(QString folder)
+{
+    QMap<QString,QString> result;
+    QDir dir(folder);
+    if(!dir.exists())
+        return result;
+
+    QStringList nameFilters;
+    nameFilters << "*.pot" << "*.POT" << "*.Pot";
+    QFileInfoList fileList = dir.entryInfoList(nameFilters, QDir::Files | QDir::NoSymLinks);
+    foreach (const QFileInfo &fileInfo, fileList)
+    {
+        QString filename = fileInfo.fileName();
+        QMap<QString, QString> annotations = getAnnotationValuesFromFile(fileInfo.absoluteFilePath());
+        QString title = annotations.value("Title", fileInfo.baseName());
+        result[filename] = title;
+    }
+    return result;
+}
+
+QMap<QString,QString> getAnnotationValuesFromFile(QString filename)
+{
+    QMap<QString,QString> result;
+    QFile file(filename);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return result;
+
+    QTextStream in(&file);
+    result = getAnnotationValuesFromText(in.readAll());
+    file.close();
+    return result;
+}
+
+QMap<QString,QString> getAnnotationValuesFromText(QString documentSource)
+{
+    QMap<QString,QString> result;
+    QTextStream in(&documentSource);
+    while (!in.atEnd())
+    {
+        QString line = in.readLine().trimmed();
+        if (line.startsWith("//") && line.contains("@") && line.contains(":"))
+        {
+            QString commentsubline = line.mid(2).trimmed();
+            if(commentsubline.startsWith("@"))
+            {
+                QStringList parts = commentsubline.mid(1).split(":");
+                if(parts.count() == 2)
+                    result[parts[0].trimmed()] = parts[1].trimmed();
+            }
+            continue;
+        }
+    }
+    return result;
+}
+
+QList<QString> getAnnotationLinesFromText(QString documentSource)
+{
+    QList<QString> result;
+    QTextStream in(&documentSource);
+    while (!in.atEnd())
+    {
+        QString line = in.readLine().trimmed();
+        if (line.startsWith("//") && line.contains("@") && line.contains(":"))
+        {
+            QString commentsubline = line.mid(2).trimmed();
+            if(commentsubline.startsWith("@"))
+                result.push_back(commentsubline.mid(1).trimmed());
+            continue;
+        }
+    }
+    return result;
+}

@@ -14,5 +14,8 @@
         <file>icons/document-save-as.png</file>
         <file>icons/dialog-close.png</file>
         <file>icons/information.png</file>
+        <file>icons/document-openspec.png</file>
+        <file>qt_translations/qt_hu.qm</file>
+        <file>qt_translations/qtbase_hu.qm</file>
     </qresource>
 </RCC>

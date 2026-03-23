@@ -9,8 +9,6 @@
 #include <QWidget>
 #include <QSize>
 
-#define VERSION "1.004"
-
 class QPaintEvent;
 class QResizeEvent;
 class QRect;

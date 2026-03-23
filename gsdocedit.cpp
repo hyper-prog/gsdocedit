@@ -71,6 +71,11 @@ void GsDocEdit::setupMenus()
     connect(openAct, &QAction::triggered, this, &GsDocEdit::openDocument);
     fileMenu->addAction(openAct);
 
+    QAction *openspecAct = new QAction(tr("&Open from list..."), this);
+    openspecAct->setIcon(QIcon(":/icons/document-openspec.png"));
+    connect(openspecAct, &QAction::triggered, this, &GsDocEdit::openlistDocument);
+    fileMenu->addAction(openspecAct);
+
     QAction *saveAct = new QAction(tr("&Save"), this);
     saveAct->setIcon(QIcon(":/icons/document-save.png"));
     connect(saveAct, &QAction::triggered, this, &GsDocEdit::saveDocument);
@@ -91,6 +96,7 @@ void GsDocEdit::setupMenus()
     toolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
     toolBar->addAction(newAct);
     toolBar->addAction(openAct);
+    toolBar->addAction(openspecAct);
     toolBar->addAction(saveAct);
     toolBar->addAction(saveAsAct);
 
@@ -166,7 +172,7 @@ void GsDocEdit::setupMenus()
     connect(aboutAct, &QAction::triggered, this, [this](){
             QMessageBox::information(this,tr("GsDocEdit - About"),
                                  QString(tr("GsDocEdit - %1 \nAuthor: Deák Péter (hyper80@gmail.com)\nLincense: GPLv2\n%2 - Qt: %3"))
-                                     .arg(VERSION)
+                                     .arg(GSDC_VERSION)
                                      .arg(__DATE__)
                                      .arg(QT_VERSION_STR));
     });
@@ -204,11 +210,8 @@ void GsDocEdit::newDocument()
         editor->document()->setModified(false);
 }
 
-void GsDocEdit::openDocument() 
+void GsDocEdit::openFile(const QString &fileName)
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Open"), QString(), tr("All Files (*.*);;Text Files (*.txt *.cpp *.h *.json)"));
-    if(fileName.isEmpty())
-        return;
     QFile file(fileName);
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -221,6 +224,87 @@ void GsDocEdit::openDocument()
     setWindowTitle(QString("%1 - gSafe document editor").arg(QFileInfo(fileName).fileName()));
     if(editor->document())
         editor->document()->setModified(false);
+}
+
+void GsDocEdit::openDocument()
+{
+    if(editor->document() && editor->document()->isModified())
+    {
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            this,
+            tr("Save Confirmation"),
+            tr("The document has been modified. Do you want to save the changes?"),
+            QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel
+        );
+
+        if(reply == QMessageBox::Yes)
+        {
+            saveDocument();
+            if (editor->document()->isModified()) // unsuccessful save
+                return;
+        }
+        else if(reply == QMessageBox::Cancel)
+        {
+            return;
+        }
+    }
+
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open"), QString(), tr("All Files (*.*);;Text Files (*.txt *.cpp *.h *.json)"));
+    if(fileName.isEmpty())
+        return;
+    openFile(fileName);
+}
+
+void GsDocEdit::openlistDocument()
+{
+    if(editor->document() && editor->document()->isModified())
+    {
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            this,
+            tr("Save Confirmation"),
+            tr("The document has been modified. Do you want to save the changes?"),
+            QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel
+        );
+
+        if(reply == QMessageBox::Yes)
+        {
+            saveDocument();
+            if (editor->document()->isModified()) // unsuccessful save
+                return;
+        }
+        else if(reply == QMessageBox::Cancel)
+        {
+            return;
+        }
+    }
+
+    QMap<QString,QString> filenameTitlePairs;
+    filenameTitlePairs = getFilenameTitlePairsFromFolder(QDir::currentPath() + QDir::separator() + "documents");
+    if(filenameTitlePairs.isEmpty())
+    {
+        QMessageBox::warning(this, tr("Error"), tr("No document templates found in the documents folder."));
+        return;
+    }
+    HDialog *dlg = new HDialog(this);
+    HDataMatrix *titlelist = new HDataMatrix();
+    for(auto it = filenameTitlePairs.constBegin(); it != filenameTitlePairs.constEnd(); ++it)
+        titlelist->addRow({it.value()});
+    titlelist->setHeaderCell(0, tr("Document title"));
+    titlelist->keyfield = 0;
+    dlg->setWindowTitle(tr("Select document to open"));
+    dlg->setAttribute("title",tr("Select document to open"));
+    dlg->setAttribute("button_1_text",tr("Ok"));
+    dlg->setAttribute("button_1_action","accept");
+    dlg->add(titlelist);
+    dlg->resize(400, 300);
+    if(dlg->exec() == QDialog::Accepted)
+    {
+        QString filename = filenameTitlePairs.key(titlelist->soft_current_key, QString());
+        if(filename.isEmpty())
+            return;
+        openFile(QDir::currentPath() + QDir::separator() + "documents" + QDir::separator() + filename);
+    }
+    delete dlg;
 }
 
 void GsDocEdit::saveDocument() 
@@ -502,6 +586,154 @@ void GsDocEdit::closeEvent(QCloseEvent *event)
     event->accept();
 }
 
+QMap<QString, QString> GsDocEdit::generateFixVariableMap()
+{
+    QMap<QString, QString> fixMap;
+    QDateTime dt = QDateTime::currentDateTime() ;
+    fixMap["datetime.isodate"] = dt.toString(Qt::ISODate);
+    fixMap["datetime.year"] = dt.toString("yyyy");
+    fixMap["datetime.month"] = dt.toString("MM");
+    fixMap["datetime.monthname"] = dt.toString("MMMM");
+    fixMap["datetime.firstdayofmonth"] = QDateTime(QDate(dt.date().year(), dt.date().month(), 1), QTime(0,0,0)).toString("dd");
+    fixMap["datetime.lastdayofmonth"] = QDateTime(QDate(dt.date().year(), dt.date().month(), dt.date().daysInMonth()), QTime(23,59,59)).toString("dd");
+    fixMap["datetime.day"] = dt.toString("dd");
+    fixMap["datetime.hour"] = dt.toString("HH");
+    fixMap["datetime.minute"] = dt.toString("mm");
+
+    return fixMap;
+}
+
+void GsDocEdit::askRequiredData()
+{
+    QList<QString> annLin;
+    QList<QString> setValKeys;
+    askReplaceMap.clear();
+
+    HRecord *rec = new HRecord("get_data");
+    annLin = getAnnotationLinesFromText(editor->toPlainText());
+    int fileld_number_to_get = 0;
+    for(auto it = annLin.constBegin(); it != annLin.constEnd(); ++it)
+    {
+        if(it->startsWith("GET:") || it->startsWith("GETNE:"))
+        {
+            bool ne = false;
+            QString cmdline;
+            if(it->startsWith("GET:"))
+            {
+                cmdline = it->mid(4).trimmed();
+                ne = false;
+            }
+            if(it->startsWith("GETNE:"))
+            {
+                cmdline = it->mid(6).trimmed();
+                ne = true;
+            }
+
+            QStringList cparts = cmdline.split("#",Qt::SkipEmptyParts);
+            if(cparts.count() == 3)
+            {
+                if(cparts[0] == "string")
+                {
+                    if(!ne || !replaceMap.contains(cparts[1]))
+                    {
+                        HField *f = new HSmallTextField(cparts[1],cparts[2],"title");
+                        f->setColor(170,170,255);
+                        rec->addField(f);
+                        if(replaceMap.contains(cparts[1]))
+                             rec->setStrValue(cparts[1],replaceMap[cparts[1]]);
+                        setValKeys.push_back(cparts[1]);
+                        fileld_number_to_get++;
+                    }
+                }
+                if(cparts[0] == "date")
+                {
+                    if(!ne || !replaceMap.contains(cparts[1]))
+                    {
+                        HField *f = new HDateField(cparts[1],cparts[2],"title");
+                        f->setColor(170,170,255);
+                        rec->addField(f);
+                        if(replaceMap.contains(cparts[1]))
+                        {
+                            QDate getDate = QDate::fromString(replaceMap[cparts[1]], Qt::ISODate);
+                            if(getDate.isValid())
+                                rec->setStrValue(cparts[1], getDate.toString(Qt::ISODate));
+                            else
+                                rec->setStrValue(cparts[1],QDate::currentDate().toString(Qt::ISODate));
+                        }
+                        else
+                        {
+                            rec->setStrValue(cparts[1],QDate::currentDate().toString(Qt::ISODate));
+                        }
+                        setValKeys.push_back(cparts[1]);
+                        fileld_number_to_get++;
+                    }
+                }
+                if(cparts[0] == "bool")
+                {
+                    if(!ne || !replaceMap.contains(cparts[1]))
+                    {
+                        HField *f = new HCheckField(cparts[1],cparts[2],"title");
+                        f->setColor(170,170,255);
+                        rec->addField(f);
+                        if(replaceMap.contains(cparts[1]))
+                        {
+                            QString val = replaceMap[cparts[1]].toLower();
+                            if(val == "true" || val == "1" || val == "yes" || val == "y" || val == "t")
+                                rec->setStrValue(cparts[1], "1");
+                            else
+                                rec->setStrValue(cparts[1], "0");
+                        }
+                        setValKeys.push_back(cparts[1]);
+                        fileld_number_to_get++;
+                    }
+                }
+            }
+        }
+    }
+
+    //No need to ask data
+    if(fileld_number_to_get == 0)
+    {
+        delete rec;
+        return;
+    }
+
+    HDialog *dlg = new HDialog(this);
+    dlg->setAttribute("window_title", tr("Input required data"));
+    dlg->setAttribute("stretch_before_bottom_buttons","yes");
+    dlg->setAttribute("button_1_text",tr("Ok"));
+    dlg->setAttribute("button_1_action","accept");
+    dlg->add(rec);
+    dlg->resize(400, 300);
+    if(dlg->exec() == QDialog::Accepted)
+    {
+        foreach(const QString &key, setValKeys)
+        {
+            if(rec->fieldByName(key)->className() == "HDateField")
+            {
+                QDate date = QDate::fromString(rec->strValue(key), Qt::ISODate);
+                if(date.isValid())
+                {
+                    askReplaceMap[key] = date.toString(Qt::ISODate);
+                    askReplaceMap[key + "_fulldate"] = date.toString(Qt::ISODate);
+                    askReplaceMap[key + "_year"] = date.toString("yyyy");
+                    askReplaceMap[key + "_month"] = date.toString("MM");
+                    askReplaceMap[key + "_day"] = date.toString("dd");
+                }
+            }
+            if(rec->fieldByName(key)->className() == "HSmallTextField")
+            {
+                askReplaceMap[key] = rec->strValue(key);
+            }
+            if(rec->fieldByName(key)->className() == "HCheckField")
+            {
+                askReplaceMap[key] = rec->strValue(key);
+            }
+        }
+    }
+    delete dlg;
+}
+
 QString GsDocEdit::getRawDocumentCode()
 {
     HTextProcessor tproc;
@@ -521,8 +753,22 @@ void GsDocEdit::previewDocument()
     const QString fileName = "preview.pdf";
     const QString filePath = QDir(tempDir).filePath(fileName);
 
+    askRequiredData();
+
+    QMap<QString,QString> merged;
+    auto fixMap = generateFixVariableMap();
+    for (auto it = fixMap.begin(); it != fixMap.end(); ++it) {
+        merged.insert(it.key(), it.value());
+    }
+    for (auto it = replaceMap.begin(); it != replaceMap.end(); ++it) {
+        merged.insert(it.key(), it.value());
+    }
+    for (auto it = askReplaceMap.begin(); it != askReplaceMap.end(); ++it) {
+        merged.insert(it.key(), it.value());
+    }
+
     DocAssembler *da = new DocAssembler(editor->toPlainText());
-    auto splitMaps = split_stringmaps(replaceMap);
+    auto splitMaps = split_stringmaps(merged);
     for (auto it = splitMaps.constBegin(); it != splitMaps.constEnd(); ++it)
         da->addValueMap(it.key(), it.value());
 
@@ -554,8 +800,22 @@ void GsDocEdit::exportDocument()
     if (outputFile.isEmpty())
         return;
     
+    askRequiredData();
+
+    QMap<QString,QString> merged;
+    auto fixMap = generateFixVariableMap();
+    for (auto it = fixMap.begin(); it != fixMap.end(); ++it) {
+        merged.insert(it.key(), it.value());
+    }
+    for (auto it = replaceMap.begin(); it != replaceMap.end(); ++it) {
+        merged.insert(it.key(), it.value());
+    }
+    for (auto it = askReplaceMap.begin(); it != askReplaceMap.end(); ++it) {
+        merged.insert(it.key(), it.value());
+    }
+
     DocAssembler *da = new DocAssembler(editor->toPlainText());
-    auto splitMaps = split_stringmaps(replaceMap);
+    auto splitMaps = split_stringmaps(merged);
     for (auto it = splitMaps.constBegin(); it != splitMaps.constEnd(); ++it)
         da->addValueMap(it.key(), it.value());
 

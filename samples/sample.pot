@@ -1,0 +1,36 @@
+// GsDocEdit - sample file
+//
+// @Title:Sample warranty form, english
+// @UnderlayPdf:warranty_form.pdf
+//
+// @GET:string#data.prodname#Product name
+// @GET:string#data.modelnbr#Model number
+// @GET:string#data.serial#Serial number
+
+// @GET:string#data.custname#Customer name
+// @GET:string#data.custaddr#Customer address
+// @GET:string#data.custphone#Customer phone
+// @GET:date#data.purchdate#Date of purchase
+
+// @GET:string#data.reseller#Reseller name
+
+//grid#0,0,100%,100%
+setf#Arial,24
+
+html#450,700,900,48#{{.data.prodname}}
+html#460,770,250,48#{{.data.modelnbr}}
+html#1060,770,330,48#{{.data.serial}}
+
+html#475,920,900,48#{{.data.custname}}
+html#360,1000,1000,48#{{.data.custaddr}}
+html#455,1075,800,48#{{.data.custphone}}
+
+setf#Arial,30
+html#510,1220,175,48#{{.data.purchdate_year}}
+html#830,1220,100,48#{{.data.purchdate_month}}
+html#1110,1220,110,48#{{.data.purchdate_day}}
+
+setf#Arial,24
+html#550,1300,850,48#{{.data.reseller}}
+
+

@@ -10,7 +10,7 @@
 #include <QString>
 #include <QMap>
 
-#define GSDC_VERSION "1.011"
+#define GSDC_VERSION "1.012"
 
 class CodeEditor;
 class QCloseEvent;
@@ -24,10 +24,13 @@ public:
     GsDocEdit(QWidget *parent = nullptr);
 
     QMap<QString, QString> replaceMap;
+    QMap<QString, QString> askReplaceMap;
 
     QString getRawDocumentCode();
     int csvArrayGenerator(QString csvFile, QString outputDirectory);
     int generateDocumentArrayItem(QMap<QString, QString> replacemap, QString outputDirectory,int o_index);
+
+    QMap<QString, QString> generateFixVariableMap();
 
 private slots:
     void editReplaceData();
@@ -38,11 +41,14 @@ private slots:
     void exportArrayDocument();
     void newDocument();
     void openDocument();
+    void openlistDocument();
     void saveDocument();
     void saveDocumentAs();
 
+    void askRequiredData();
+
 private:
-    
+    void openFile(const QString &fileName);
     void setupMenus();
     void loadReplaceMapFromFile();
     void saveReplaceMapToFile();

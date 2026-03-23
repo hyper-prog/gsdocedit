@@ -51,5 +51,10 @@ public:
     QMap<QString,HPageTileRendererPosition> lastRenderStoredPositions;
 };
 
+QMap<QString,QString> getFilenameTitlePairsFromFolder(QString folder);
+QMap<QString,QString> getAnnotationValuesFromText(QString documentSource);
+QList<QString>        getAnnotationLinesFromText(QString documentSource);
+QMap<QString,QString> getAnnotationValuesFromFile(QString filename);
+
 
 #endif // DOCASSEMBLER_H

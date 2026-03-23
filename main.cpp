@@ -7,19 +7,33 @@
 
 #include <QApplication>
 #include <QTranslator>
+#include <QLibraryInfo>
 #include <QLocale>
 #include "gsdocedit.h"
+
+QList<QString> availableLanguages = {
+    "hu"
+};
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
 
-    // Load translation only if system language is Hungarian
-    QTranslator translator;
+    QTranslator qtTranslator;
+    QTranslator qtBaseTranslator;
+    QTranslator myTranslator;
     QString locale = QLocale::system().name();
-    if (locale.startsWith("hu")) {
-        QString translationFile = QString(":/hu.qm");
-        if (translator.load(translationFile, QApplication::applicationDirPath()) || translator.load(translationFile)) {
-            app.installTranslator(&translator);
+    for(const QString& lang : availableLanguages)
+    {
+        if (locale.startsWith(lang))
+        {
+            if(qtTranslator.load(":/qt_translations/qt_" + lang + ".qm"))
+                app.installTranslator(&qtTranslator);
+
+            if(qtBaseTranslator.load(":/qt_translations/qtbase_" + lang + ".qm"))
+                app.installTranslator(&qtBaseTranslator);
+
+            if(myTranslator.load(":/"+ lang + ".qm"))
+                app.installTranslator(&myTranslator);
         }
     }
 

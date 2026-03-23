@@ -1,0 +1,35 @@
+// GsDocEdit - minta fájl
+// 
+// @Title:Garanciajegy minta, magyarul
+// @UnderlayPdf:garanciajegy_urlap.pdf
+//
+// @GET:string#data.prodname#Termék neve
+// @GET:string#data.modelnbr#Modell szám
+// @GET:string#data.serial#Sorozatszám
+//
+// @GET:string#data.custname#Vevő neve
+// @GET:string#data.custaddr#Vevő címe
+// @GET:string#data.custphone#Telefon/Email
+// @GET:date#data.purchdate#Vásárlás dátuma
+//
+// @GET:string#data.reseller#Kereskedő cég
+//grid#0,0,100%,100%
+setf#Arial,24
+
+html#420,740,900,48#{{.data.prodname}}
+html#495,820,250,48#{{.data.modelnbr}}
+html#1060,820,330,48#{{.data.serial}}
+
+html#405,967,900,48#{{.data.custname}}
+html#340,1047,1000,48#{{.data.custaddr}}
+html#455,1122,800,48#{{.data.custphone}}
+
+setf#Arial,30
+html#510,1266,175,48#{{.data.purchdate_year}}
+html#795,1266,100,48#{{.data.purchdate_month}}
+html#1010,1266,110,48#{{.data.purchdate_day}}
+
+setf#Arial,24
+html#550,1350,850,48#{{.data.reseller}}
+
+
