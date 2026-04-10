@@ -10,14 +10,12 @@ OBJECTS += gsdocedit64.res
 
 SOURCES += \
     codeeditor.cpp \
-    docassembler.cpp \
     gsdocedit.cpp \
     main.cpp \
     replacedata_dialog.cpp
 
 HEADERS += \
     codeeditor.h \
-    docassembler.h \
     gsdocedit.h \
     replacedata_dialog.h
 

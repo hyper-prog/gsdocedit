@@ -10,7 +10,7 @@
 #include <QString>
 #include <QMap>
 
-#define GSDC_VERSION "1.012"
+#define GSDC_VERSION "1.013"
 
 class CodeEditor;
 class QCloseEvent;
@@ -44,8 +44,6 @@ private slots:
     void openlistDocument();
     void saveDocument();
     void saveDocumentAs();
-
-    void askRequiredData();
 
 private:
     void openFile(const QString &fileName);

@@ -38,8 +38,6 @@
 
 #include <gSafe>
 
-#include <docassembler.h>
-
 GsDocEdit::GsDocEdit(QWidget *parent): QMainWindow(parent), editor(new CodeEditor(this)) 
 {
     setCentralWidget(editor);
@@ -507,47 +505,6 @@ void GsDocEdit::importReplaceMap()
     saveReplaceMapToFile();
 }
 
-QMap<QString, QString> merge_maps(const QMap<QString, QString> &base, const QMap<QString, QString> &overrides)
-{
-    QMap<QString, QString> result = base;
-    for (auto it = overrides.constBegin(); it != overrides.constEnd(); ++it)
-    {
-        result[it.key()] = it.value();
-    }
-    return result;
-}
-
-/* This function receives a QMap<QString,QString> and splits it into a 
-   more QMap<QString, QString> maps according to the keys prefixes which
-   are separated by a dot ('.') character.
-   For example, a key "user.name" will be placed into a map with the name "user"
-   The result is a QMap where the keys are the prefixes and the values are the corresponding QMap<QString,QString> */
-QMap< QString, QMap<QString,QString> > split_stringmaps(QMap<QString,QString> input)
-{
-    QMap< QString, QMap<QString,QString> > result;
-
-    for (auto it = input.constBegin(); it != input.constEnd(); ++it)
-    {
-        const QString &fullKey = it.key();
-        QString value = it.value();
-        
-        int dotIndex = fullKey.indexOf('.');
-        if (dotIndex == -1)
-        {
-            // No prefix, put in a default map
-            result["values"].insert(fullKey, value);
-        }
-        else
-        {
-            QString prefix = fullKey.left(dotIndex);
-            QString subKey = fullKey.mid(dotIndex + 1);
-            result[prefix].insert(subKey, value);
-        }
-    }
-
-    return result;
-}
-
 void GsDocEdit::closeEvent(QCloseEvent *event)
 {
     if (editor && editor->document() && editor->document()->isModified())
@@ -603,137 +560,6 @@ QMap<QString, QString> GsDocEdit::generateFixVariableMap()
     return fixMap;
 }
 
-void GsDocEdit::askRequiredData()
-{
-    QList<QString> annLin;
-    QList<QString> setValKeys;
-    askReplaceMap.clear();
-
-    HRecord *rec = new HRecord("get_data");
-    annLin = getAnnotationLinesFromText(editor->toPlainText());
-    int fileld_number_to_get = 0;
-    for(auto it = annLin.constBegin(); it != annLin.constEnd(); ++it)
-    {
-        if(it->startsWith("GET:") || it->startsWith("GETNE:"))
-        {
-            bool ne = false;
-            QString cmdline;
-            if(it->startsWith("GET:"))
-            {
-                cmdline = it->mid(4).trimmed();
-                ne = false;
-            }
-            if(it->startsWith("GETNE:"))
-            {
-                cmdline = it->mid(6).trimmed();
-                ne = true;
-            }
-
-            QStringList cparts = cmdline.split("#",Qt::SkipEmptyParts);
-            if(cparts.count() == 3)
-            {
-                if(cparts[0] == "string")
-                {
-                    if(!ne || !replaceMap.contains(cparts[1]))
-                    {
-                        HField *f = new HSmallTextField(cparts[1],cparts[2],"title");
-                        f->setColor(170,170,255);
-                        rec->addField(f);
-                        if(replaceMap.contains(cparts[1]))
-                             rec->setStrValue(cparts[1],replaceMap[cparts[1]]);
-                        setValKeys.push_back(cparts[1]);
-                        fileld_number_to_get++;
-                    }
-                }
-                if(cparts[0] == "date")
-                {
-                    if(!ne || !replaceMap.contains(cparts[1]))
-                    {
-                        HField *f = new HDateField(cparts[1],cparts[2],"title");
-                        f->setColor(170,170,255);
-                        rec->addField(f);
-                        if(replaceMap.contains(cparts[1]))
-                        {
-                            QDate getDate = QDate::fromString(replaceMap[cparts[1]], Qt::ISODate);
-                            if(getDate.isValid())
-                                rec->setStrValue(cparts[1], getDate.toString(Qt::ISODate));
-                            else
-                                rec->setStrValue(cparts[1],QDate::currentDate().toString(Qt::ISODate));
-                        }
-                        else
-                        {
-                            rec->setStrValue(cparts[1],QDate::currentDate().toString(Qt::ISODate));
-                        }
-                        setValKeys.push_back(cparts[1]);
-                        fileld_number_to_get++;
-                    }
-                }
-                if(cparts[0] == "bool")
-                {
-                    if(!ne || !replaceMap.contains(cparts[1]))
-                    {
-                        HField *f = new HCheckField(cparts[1],cparts[2],"title");
-                        f->setColor(170,170,255);
-                        rec->addField(f);
-                        if(replaceMap.contains(cparts[1]))
-                        {
-                            QString val = replaceMap[cparts[1]].toLower();
-                            if(val == "true" || val == "1" || val == "yes" || val == "y" || val == "t")
-                                rec->setStrValue(cparts[1], "1");
-                            else
-                                rec->setStrValue(cparts[1], "0");
-                        }
-                        setValKeys.push_back(cparts[1]);
-                        fileld_number_to_get++;
-                    }
-                }
-            }
-        }
-    }
-
-    //No need to ask data
-    if(fileld_number_to_get == 0)
-    {
-        delete rec;
-        return;
-    }
-
-    HDialog *dlg = new HDialog(this);
-    dlg->setAttribute("window_title", tr("Input required data"));
-    dlg->setAttribute("stretch_before_bottom_buttons","yes");
-    dlg->setAttribute("button_1_text",tr("Ok"));
-    dlg->setAttribute("button_1_action","accept");
-    dlg->add(rec);
-    dlg->resize(400, 300);
-    if(dlg->exec() == QDialog::Accepted)
-    {
-        foreach(const QString &key, setValKeys)
-        {
-            if(rec->fieldByName(key)->className() == "HDateField")
-            {
-                QDate date = QDate::fromString(rec->strValue(key), Qt::ISODate);
-                if(date.isValid())
-                {
-                    askReplaceMap[key] = date.toString(Qt::ISODate);
-                    askReplaceMap[key + "_fulldate"] = date.toString(Qt::ISODate);
-                    askReplaceMap[key + "_year"] = date.toString("yyyy");
-                    askReplaceMap[key + "_month"] = date.toString("MM");
-                    askReplaceMap[key + "_day"] = date.toString("dd");
-                }
-            }
-            if(rec->fieldByName(key)->className() == "HSmallTextField")
-            {
-                askReplaceMap[key] = rec->strValue(key);
-            }
-            if(rec->fieldByName(key)->className() == "HCheckField")
-            {
-                askReplaceMap[key] = rec->strValue(key);
-            }
-        }
-    }
-    delete dlg;
-}
-
 QString GsDocEdit::getRawDocumentCode()
 {
     HTextProcessor tproc;
@@ -753,8 +579,6 @@ void GsDocEdit::previewDocument()
     const QString fileName = "preview.pdf";
     const QString filePath = QDir(tempDir).filePath(fileName);
 
-    askRequiredData();
-
     QMap<QString,QString> merged;
     auto fixMap = generateFixVariableMap();
     for (auto it = fixMap.begin(); it != fixMap.end(); ++it) {
@@ -763,14 +587,13 @@ void GsDocEdit::previewDocument()
     for (auto it = replaceMap.begin(); it != replaceMap.end(); ++it) {
         merged.insert(it.key(), it.value());
     }
-    for (auto it = askReplaceMap.begin(); it != askReplaceMap.end(); ++it) {
-        merged.insert(it.key(), it.value());
-    }
 
     DocAssembler *da = new DocAssembler(editor->toPlainText());
     auto splitMaps = split_stringmaps(merged);
     for (auto it = splitMaps.constBegin(); it != splitMaps.constEnd(); ++it)
         da->addValueMap(it.key(), it.value());
+
+    da->askRequestedData(this);
 
     try {
         da->generatePdfDocument(filePath);
@@ -800,8 +623,6 @@ void GsDocEdit::exportDocument()
     if (outputFile.isEmpty())
         return;
     
-    askRequiredData();
-
     QMap<QString,QString> merged;
     auto fixMap = generateFixVariableMap();
     for (auto it = fixMap.begin(); it != fixMap.end(); ++it) {
@@ -810,14 +631,13 @@ void GsDocEdit::exportDocument()
     for (auto it = replaceMap.begin(); it != replaceMap.end(); ++it) {
         merged.insert(it.key(), it.value());
     }
-    for (auto it = askReplaceMap.begin(); it != askReplaceMap.end(); ++it) {
-        merged.insert(it.key(), it.value());
-    }
 
     DocAssembler *da = new DocAssembler(editor->toPlainText());
     auto splitMaps = split_stringmaps(merged);
     for (auto it = splitMaps.constBegin(); it != splitMaps.constEnd(); ++it)
         da->addValueMap(it.key(), it.value());
+
+    da->askRequestedData(this);
 
     try {
         da->generatePdfDocument(outputFile);
