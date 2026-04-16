@@ -277,7 +277,7 @@ void GsDocEdit::openlistDocument()
     }
 
     QMap<QString,QString> filenameTitlePairs;
-    filenameTitlePairs = getFilenameTitlePairsFromFolder(QDir::currentPath() + QDir::separator() + "documents");
+    filenameTitlePairs = getTitleFilenamePairsFromFolder(QDir::currentPath() + QDir::separator() + "documents");
     if(filenameTitlePairs.isEmpty())
     {
         QMessageBox::warning(this, tr("Error"), tr("No document templates found in the documents folder."));
@@ -286,7 +286,7 @@ void GsDocEdit::openlistDocument()
     HDialog *dlg = new HDialog(this);
     HDataMatrix *titlelist = new HDataMatrix();
     for(auto it = filenameTitlePairs.constBegin(); it != filenameTitlePairs.constEnd(); ++it)
-        titlelist->addRow({it.value()});
+        titlelist->addRow({it.key()});
     titlelist->setHeaderCell(0, tr("Document title"));
     titlelist->keyfield = 0;
     dlg->setWindowTitle(tr("Select document to open"));
@@ -297,7 +297,7 @@ void GsDocEdit::openlistDocument()
     dlg->resize(400, 300);
     if(dlg->exec() == QDialog::Accepted)
     {
-        QString filename = filenameTitlePairs.key(titlelist->soft_current_key, QString());
+        QString filename = filenameTitlePairs.value(titlelist->soft_current_key, QString());
         if(filename.isEmpty())
             return;
         openFile(QDir::currentPath() + QDir::separator() + "documents" + QDir::separator() + filename);

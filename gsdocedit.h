@@ -10,7 +10,7 @@
 #include <QString>
 #include <QMap>
 
-#define GSDC_VERSION "1.013"
+#define GSDC_VERSION "1.014"
 
 class CodeEditor;
 class QCloseEvent;
